@@ -6,7 +6,7 @@ Backend for a coworking workspace reservation system built as part of a **Darien
 
 The system combines a REST API with relational persistence, reservation business rules, MQTT-based IoT communication, real-time WebSocket updates, automated testing, and separate Docker environments.
 
-**Frontend:** [Practical-Test-Darien-Technology-Frontend](https://github.com/ismaelrodino2/Practical-Test-Darien-Technology-Frontend)
+**Frontend:** [Practical-Test-Darien-Technology-Frontend](https://github.com/ismaelrodino2/workspace-reservation-web)
 
 ---
 
@@ -273,4 +273,4 @@ Containerization with Docker and Docker Compose was listed as an **optional extr
 
 The frontend was developed as a separate application:
 
-👉 [View the Frontend Repository](https://github.com/ismaelrodino2/Practical-Test-Darien-Technology-Frontend)
+👉 [View the Frontend Repository](https://github.com/ismaelrodino2/workspace-reservation-web)
