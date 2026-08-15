@@ -1,45 +1,209 @@
-# Challenge Backend
+# Workspace Reservation System — Backend & IoT
 
-Node.js/TypeScript API using Express + Prisma with PostgreSQL.
+> **Backend + IoT technical assessment built in 2 days against a written specification, including the optional containerization requirement.**
 
-## Quick Start
+Backend for a coworking workspace reservation system built as part of a **Darien Technology technical assessment**.
 
-1. Copy `example.env` to `.env` and configure `DATABASE_URL` and `API_KEY`
-2. Run migrations: `pnpm prisma:migrate`
-3. Start the server: `pnpm dev`
+The system combines a REST API with relational persistence, reservation business rules, MQTT-based IoT communication, real-time WebSocket updates, automated testing, and separate Docker environments.
 
-**Or use Docker:** See [docker.md](./docker.md) for details.
+**Frontend:** [Practical-Test-Darien-Technology-Frontend](https://github.com/ismaelrodino2/Practical-Test-Darien-Technology-Frontend)
 
-## Scripts
+---
 
-- `pnpm dev`: Development mode
-- `pnpm build`: Build for production
-- `pnpm start`: Run production build
+## Tech Stack
 
-## API Endpoints
+**Backend**
 
-All routes require `x-api-key` header.
+* Node.js
+* TypeScript
+* Express.js
+* Prisma
+* PostgreSQL
 
-- `GET /locations`
-- `GET/POST/PUT/DELETE /spaces`
-- `GET/POST/PUT/DELETE /reservations` (supports pagination: `?page=1&pageSize=10`)
+**Real-time & IoT**
+
+* MQTT
+* WebSockets
+
+**Testing & Infrastructure**
+
+* Jest
+* Docker
+* Docker Compose
+
+---
+
+## What I Built
+
+The backend exposes a REST API for managing coworking locations, spaces, and reservations.
+
+Beyond basic CRUD operations, it implements domain rules around reservation availability and usage limits, while also acting as the bridge between IoT devices and the frontend's real-time monitoring dashboard.
+
+### API
+
+All routes are protected using the `x-api-key` header.
+
+```text
+GET                    /locations
+GET/POST/PUT/DELETE    /spaces
+GET/POST/PUT/DELETE    /reservations
+```
+
+Reservations support pagination:
+
+```text
+/reservations?page=1&pageSize=10
+```
+
+---
 
 ## Business Rules
 
-- Time conflicts: same space cannot be reserved for overlapping intervals
-- Weekly limit: max 3 reservations per client (email) per week
-- Reservation times must be in the future
+Reservation creation is validated at the backend instead of relying on the client.
 
-## MQTT Integration
+The API prevents:
 
-The backend subscribes to MQTT topics using wildcards:
-- `sites/+/offices/+/telemetry`
-- `sites/+/offices/+/reported`
-- `sites/+/offices/+/desired`
+* Overlapping reservations for the same space
+* More than **3 reservations per client per week**
+* Reservations scheduled in the past
 
-Telemetry is broadcast via WebSocket at `/telemetry?x-api-key=YOUR_KEY`.
+This keeps the domain rules consistent regardless of the client consuming the API.
 
-## Running Simulator
+---
+
+## IoT & Real-Time Architecture
+
+The backend subscribes to MQTT topics using wildcard subscriptions:
+
+```text
+sites/+/offices/+/telemetry
+sites/+/offices/+/reported
+sites/+/offices/+/desired
+```
+
+Telemetry received through MQTT is broadcast to connected frontend clients through WebSockets.
+
+```text
+IoT Device / Simulator
+        │
+        │ MQTT
+        ▼
+┌─────────────────────┐
+│   MQTT Subscriber   │
+│  wildcard topics    │
+└──────────┬──────────┘
+           │
+           │ telemetry events
+           ▼
+┌─────────────────────┐
+│   Node / Express    │
+└──────────┬──────────┘
+           │
+           │ WebSocket
+           ▼
+┌─────────────────────┐
+│  Real-time Admin    │
+│     Dashboard       │
+└─────────────────────┘
+```
+
+The WebSocket endpoint is available at:
+
+```text
+/telemetry?x-api-key=YOUR_KEY
+```
+
+This architecture allows telemetry updates to reach the dashboard without continuous HTTP polling.
+
+---
+
+## Docker & Multi-Environment Setup
+
+Containerization was an **optional requirement worth extra points** in the original assessment.
+
+The project includes dedicated configurations for production, development, and testing:
+
+```text
+Dockerfile
+Dockerfile.dev
+
+docker-compose.yml
+docker-compose.dev.yml
+docker-compose.test.yml
+```
+
+This provides isolated and reproducible environments instead of depending on locally installed infrastructure.
+
+### Development
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+### Production
+
+```bash
+docker compose up --build
+```
+
+### Testing
+
+```bash
+docker compose -f docker-compose.test.yml up --build
+```
+
+See [`docker.md`](./docker.md) for the complete Docker setup.
+
+---
+
+## Running Locally
+
+### Prerequisites
+
+* Node.js
+* pnpm
+* PostgreSQL
+
+### 1. Install dependencies
+
+```bash
+pnpm install
+```
+
+### 2. Configure environment variables
+
+Copy the example environment file:
+
+```bash
+cp example.env .env
+```
+
+Configure at least:
+
+```env
+DATABASE_URL=your_postgresql_connection
+API_KEY=your_api_key
+```
+
+### 3. Run database migrations
+
+```bash
+pnpm prisma:migrate
+```
+
+### 4. Start the API
+
+```bash
+pnpm dev
+```
+
+---
+
+## IoT Simulator
+
+Telemetry can be generated using the included simulator.
+
+Examples:
 
 ```bash
 # SITE_A
@@ -51,10 +215,62 @@ node index.js --site-id SITE_B --office-id OFFICE_3
 node index.js --site-id SITE_B --office-id OFFICE_4
 ```
 
+The backend consumes the MQTT messages and forwards telemetry updates to connected WebSocket clients.
+
+---
+
 ## Testing
 
-See [TEST.md](./TEST.md) for testing setup and instructions.
+Automated tests are implemented with **Jest**.
 
-## Docker
+The project also provides a dedicated Docker Compose environment for testing, isolated from development and production.
 
-See [docker.md](./docker.md) for Docker setup and configuration details.
+See [`TEST.md`](./TEST.md) for the full testing setup.
+
+---
+
+## System Architecture
+
+```text
+                    ┌────────────────────┐
+                    │  Next.js Frontend  │
+                    │                    │
+                    │ Spaces             │
+                    │ Reservations       │
+                    │ IoT Dashboard      │
+                    └─────────┬──────────┘
+                              │
+                    REST API + WebSocket
+                              │
+                              ▼
+                    ┌────────────────────┐
+                    │ Node.js / Express  │
+                    │                    │
+                    │ Business Rules     │
+                    │ MQTT Subscriber    │
+                    │ WebSocket Server   │
+                    └─────────┬──────────┘
+                              │
+                         Prisma ORM
+                              │
+                              ▼
+                       ┌────────────┐
+                       │ PostgreSQL │
+                       └────────────┘
+
+IoT Simulator ── MQTT ──► Backend ── WebSocket ──► Dashboard
+```
+
+---
+
+## Technical Assessment Context
+
+This project was developed against a **written external specification with a maximum duration of 2 days**.
+
+The assessment covered API design, relational persistence, business rules, IoT communication, real-time updates, testing, error handling, and documentation.
+
+Containerization with Docker and Docker Compose was listed as an **optional extra-points requirement** and was implemented with separate development, testing, and production configurations.
+
+The frontend was developed as a separate application:
+
+👉 [View the Frontend Repository](https://github.com/ismaelrodino2/Practical-Test-Darien-Technology-Frontend)
